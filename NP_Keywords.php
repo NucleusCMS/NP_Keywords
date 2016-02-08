@@ -38,11 +38,11 @@ class NP_Keywords extends NucleusPlugin {
     */ 
    function install()
    {
-        sql_query('CREATE TABLE `tc_type` ( `type_id` tinyint(4) NOT NULL default \'0\', `name` char(64) NOT NULL default \'\', PRIMARY KEY  (`type_id`) ) TYPE=MyISAM COMMENT=\'defines various types of data\';');
-        sql_query('INSERT INTO `tc_type` VALUES (1, \'item\');');
-        sql_query('INSERT INTO `tc_type` VALUES (2, \'keyword\');');
-        sql_query('CREATE TABLE `tc_keyword` ( `keyword_id` int(11) NOT NULL default \'0\', `keyword` char(128) NOT NULL default \'\', PRIMARY KEY  (`keyword_id`) ) TYPE=MyISAM COMMENT=\'stores keywords\';');
-        sql_query('CREATE TABLE `tc_keyword_relationship` ( `keyword_id` int(11) NOT NULL default \'0\', `key_id` int(11) NOT NULL default \'0\', `type_id` tinyint(4) NOT NULL default \'0\' ) TYPE=MyISAM COMMENT=\'binds keywords to various items\'; ');
+        sql_query("CREATE TABLE `tc_type` ( `type_id` tinyint(4) NOT NULL default '0', `name` char(64) NOT NULL default '', PRIMARY KEY  (`type_id`) ) TYPE=MyISAM COMMENT='defines various types of data';");
+        sql_query("INSERT INTO `tc_type` VALUES (1, 'item');");
+        sql_query("INSERT INTO `tc_type` VALUES (2, 'keyword');");
+        sql_query("CREATE TABLE `tc_keyword` ( `keyword_id` int(11) NOT NULL default '0', `keyword` char(128) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) TYPE=MyISAM COMMENT='stores keywords';");
+        sql_query("CREATE TABLE `tc_keyword_relationship` ( `keyword_id` int(11) NOT NULL default '0', `key_id` int(11) NOT NULL default '0', `type_id` tinyint(4) NOT NULL default '0' ) TYPE=MyISAM COMMENT='binds keywords to various items';");
         /*
         // create some options
         $this->createOption('Locale','Language (locale) to use','text','en');
