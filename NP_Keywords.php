@@ -12,7 +12,7 @@
 * @license BSD
 * @author  terry chay <tychay@php.net>
 * @author  $Author$
-* @version 0.1 ($Revision$)
+* @version 0.2 ($Revision$)
 * @since   $Date$
 */
 class NP_Keywords extends NucleusPlugin {
@@ -20,7 +20,7 @@ class NP_Keywords extends NucleusPlugin {
     function getName() { return 'Keywords Plugin'; } 
     function getAuthor() { return 'terry chay, nucleuscms.org'; } 
     function getURL() { return 'https://github.com/NucleusCMS/NP_Keywords'; } 
-    function getVersion() { return '0.1'; } 
+    function getVersion() { return '0.2'; } 
     function getDescription()
     { 
       return 'This plugin allows keywords to be included with your items and enables things so that the keywords can be displayed as a meta tag in the &lt;HEAD&gt; HTML section.'; 
