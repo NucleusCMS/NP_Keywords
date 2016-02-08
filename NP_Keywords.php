@@ -202,10 +202,10 @@ class NP_Keywords extends NucleusPlugin {
         $sql = vsprintf("SELECT k.keyword FROM %s as k, %s as kr WHERE kr.type_id=1 AND kr.key_id=%d AND kr.keyword_id=k.keyword_id", $params);
         $res = sql_query($sql);
         $returns = array();
-        while ($o = mysql_fetch_array($res)) {
+        while ($o = sql_fetch_array($res)) {
             $returns[] = $o[0];
         }
-        mysql_free_result($res);
+        sql_free_result($res);
         return $returns;
     }
     function _selectKeywordsFromBlogDate($blogid,$date)
@@ -233,15 +233,15 @@ class NP_Keywords extends NucleusPlugin {
                        sql_table('tc_keyword_relationship'),
                        sql_table('item'),
                        intval($blogid),
-                       mysql_escape_string($date),
-                       mysql_escape_string($date),
+                       sql_escape_string($date),
+                       sql_escape_string($date),
                        $len);
         $res = sql_query($sql);
         $returns = array();
-        while ($o = mysql_fetch_array($res)) {
+        while ($o = sql_fetch_array($res)) {
             $returns[] = $o[0];
         }
-        mysql_free_result($res);
+        sql_free_result($res);
         return $returns;
     }
     function _deleteKeywords($itemid)
@@ -251,15 +251,15 @@ class NP_Keywords extends NucleusPlugin {
     }
     function _selectKeyword($itemid,$keyword)
     {
-        $sql = sprintf('SELECT keyword_id FROM %s WHERE keyword=\'%s\'', sql_table('tc_keyword'), mysql_escape_string($keyword));
+        $sql = sprintf('SELECT keyword_id FROM %s WHERE keyword=\'%s\'', sql_table('tc_keyword'), sql_escape_string($keyword));
         $res = sql_query($sql);
-        if (mysql_num_rows($res)) {
-            $o = mysql_fetch_array($res);
+        if (sql_num_rows($res)) {
+            $o = sql_fetch_array($res);
             $return = $o[0];
         } else {
             $return = 0;
         }
-        mysql_free_result($res);
+        sql_free_result($res);
         return $return;
     }
     function _addKeyword($itemid,$keyword)
@@ -267,9 +267,9 @@ class NP_Keywords extends NucleusPlugin {
         //check to see if keyword exists
         $keywordid = $this->_selectKeyword($itemid, $keyword);
         if ($keywordid == 0) {
-            $sql = sprintf('INSERT INTO %s (keyword) VALUES (\'%s\')', sql_table('tc_keyword'), mysql_escape_string($keyword));
+            $sql = sprintf('INSERT INTO %s (keyword) VALUES (\'%s\')', sql_table('tc_keyword'), sql_escape_string($keyword));
             sql_query($sql);
-            $keywordid = mysql_insert_id();
+            $keywordid = sql_insert_id();
         }
         $params = array(sql_table('tc_keyword_relationship'), intval($keywordid), intval($itemid));
         $sql = vsprintf('INSERT INTO %s (keyword_id, key_id, type_id) VALUES (%d, %d, 1)',$params);
