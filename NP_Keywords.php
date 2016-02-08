@@ -38,9 +38,6 @@ class NP_Keywords extends NucleusPlugin {
     */ 
    function install()
    {
-        sql_query("CREATE TABLE `tc_type` ( `type_id` tinyint(4) NOT NULL default '0', `name` char(64) NOT NULL default '', PRIMARY KEY  (`type_id`) ) ENGINE=MyISAM COMMENT='defines various types of data';");
-        sql_query("INSERT INTO `tc_type` VALUES (1, 'item');");
-        sql_query("INSERT INTO `tc_type` VALUES (2, 'keyword');");
         sql_query("CREATE TABLE `tc_keyword` ( `keyword_id` int(11) NOT NULL default '0', `keyword` char(128) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) ENGINE=MyISAM COMMENT='stores keywords';");
         sql_query("CREATE TABLE `tc_keyword_relationship` ( `keyword_id` int(11) NOT NULL default '0', `key_id` int(11) NOT NULL default '0', `type_id` tinyint(4) NOT NULL default '0' ) ENGINE=MyISAM COMMENT='binds keywords to various items';");
         /*
@@ -196,7 +193,7 @@ class NP_Keywords extends NucleusPlugin {
     // database {{{
     function getTableList()
     {
-        return array('tc_type','tc_keyword','tc_keyword_relationship');
+        return array('tc_keyword','tc_keyword_relationship');
     }
     
     function _selectKeywords($itemid)
