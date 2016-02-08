@@ -35,7 +35,7 @@ class NP_Keywords extends NucleusPlugin {
     */ 
    function install()
    {
-        sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `keyword` char(128) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) ENGINE=MyISAM COMMENT='stores keywords';",sql_table('tc_keyword')));
+        sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `keyword` varchar(255) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) ENGINE=MyISAM COMMENT='stores keywords';",sql_table('tc_keyword')));
         sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `key_id` int(11) NOT NULL default '0', `type_id` tinyint(4) NOT NULL default '0' ) ENGINE=MyISAM COMMENT='binds keywords to various items';",sql_table('tc_keyword_relationship')));
         /*
         // create some options
