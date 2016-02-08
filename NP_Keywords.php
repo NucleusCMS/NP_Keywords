@@ -10,10 +10,7 @@
 * @access  public
 * @copyright c. 2003, terry chay
 * @license BSD
-* @author  terry chay <tychay@php.net>
-* @author  $Author$
-* @version 0.2 ($Revision$)
-* @since   $Date$
+* @author  terry chay
 */
 class NP_Keywords extends NucleusPlugin {
     // Plugin list data {{{
