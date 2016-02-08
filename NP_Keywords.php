@@ -282,8 +282,4 @@ class NP_Keywords extends NucleusPlugin {
         $sql = vsprintf('DELETE FROM %s WHERE key_id=%d AND type_id=1 AND keyword_id=%d', $params);
         sql_query($sql);
     }
-    // }}}
-    
-    // }}}
-} 
-?>
+}
