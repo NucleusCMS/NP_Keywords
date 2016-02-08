@@ -38,8 +38,8 @@ class NP_Keywords extends NucleusPlugin {
     */ 
    function install()
    {
-        sql_query("CREATE TABLE `tc_keyword` ( `keyword_id` int(11) NOT NULL default '0', `keyword` char(128) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) ENGINE=MyISAM COMMENT='stores keywords';");
-        sql_query("CREATE TABLE `tc_keyword_relationship` ( `keyword_id` int(11) NOT NULL default '0', `key_id` int(11) NOT NULL default '0', `type_id` tinyint(4) NOT NULL default '0' ) ENGINE=MyISAM COMMENT='binds keywords to various items';");
+        sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `keyword` char(128) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) ENGINE=MyISAM COMMENT='stores keywords';",sql_table('tc_keyword')));
+        sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `key_id` int(11) NOT NULL default '0', `type_id` tinyint(4) NOT NULL default '0' ) ENGINE=MyISAM COMMENT='binds keywords to various items';",sql_table('tc_keyword_relationship')));
         /*
         // create some options
         $this->createOption('Locale','Language (locale) to use','text','en');
@@ -52,8 +52,8 @@ class NP_Keywords extends NucleusPlugin {
      */
     function uninstall()
     {
-        sql_query('DROP TABLE `tc_keyword`;');
-        sql_query('DROP TABLE `tc_keyword_relationship`;');
+        sql_query( sprintf('DROP TABLE `%s`;', sql_table('tc_keyword')) );
+        sql_query( sprintf('DROP TABLE `%s`;', sql_table('tc_keyword_relationship')) );
     }
     // }}}
 
@@ -193,12 +193,13 @@ class NP_Keywords extends NucleusPlugin {
     // database {{{
     function getTableList()
     {
-        return array('tc_keyword','tc_keyword_relationship');
+        return array(sql_table('tc_keyword'),sql_table('tc_keyword_relationship'));
     }
     
     function _selectKeywords($itemid)
     {
-        $sql = sprintf('SELECT k.keyword FROM tc_keyword as k, tc_keyword_relationship as kr WHERE kr.type_id=1 AND kr.key_id=%d AND kr.keyword_id = k.keyword_id',intval($itemid));
+        $params = array(sql_table('tc_keyword'), sql_table('tc_keyword_relationship'), intval($itemid));
+        $sql = vsprintf("SELECT k.keyword FROM %s as k, %s as kr WHERE kr.type_id=1 AND kr.key_id=%d AND kr.keyword_id=k.keyword_id", $params);
         $res = sql_query($sql);
         $returns = array();
         while ($o = mysql_fetch_array($res)) {
@@ -218,16 +219,19 @@ class NP_Keywords extends NucleusPlugin {
         } else {
             $len = 'DAY';
         }
-        $sql = sprintf('SELECT k.keyword
-                          FROM tc_keyword as k,
-                               tc_keyword_relationship as r,
-                               nucleus_item as i
+        $sql = sprintf("SELECT k.keyword
+                          FROM %s as k,
+                               %s as r,
+                               %s as i
                          WHERE i.iblog = %d
-                           AND i.itime >= \'%s\'
-                           AND i.itime < DATE_ADD(\'%s\',INTERVAL 1 %s)
+                           AND i.itime >= '%s'
+                           AND i.itime < DATE_ADD('%s',INTERVAL 1 %s)
                            AND r.key_id = i.inumber
                            AND r.type_id = 1
-                           AND k.keyword_id = r.keyword_id',
+                           AND k.keyword_id = r.keyword_id",
+                       sql_table('tc_keyword'),
+                       sql_table('tc_keyword_relationship'),
+                       sql_table('item'),
                        intval($blogid),
                        mysql_escape_string($date),
                        mysql_escape_string($date),
@@ -242,12 +246,12 @@ class NP_Keywords extends NucleusPlugin {
     }
     function _deleteKeywords($itemid)
     {
-        $sql = sprintf('DELETE FROM tc_keyword_relationship WHERE key_id=%d AND type_id=1',intval($itemid));
+        $sql = sprintf('DELETE FROM %s WHERE key_id=%d AND type_id=1',sql_table('tc_keyword_relationship'),intval($itemid));
         sql_query($sql);
     }
     function _selectKeyword($itemid,$keyword)
     {
-        $sql = sprintf('SELECT keyword_id FROM tc_keyword WHERE keyword=\'%s\'', mysql_escape_string($keyword));
+        $sql = sprintf('SELECT keyword_id FROM %s WHERE keyword=\'%s\'', sql_table('tc_keyword'), mysql_escape_string($keyword));
         $res = sql_query($sql);
         if (mysql_num_rows($res)) {
             $o = mysql_fetch_array($res);
@@ -263,17 +267,19 @@ class NP_Keywords extends NucleusPlugin {
         //check to see if keyword exists
         $keywordid = $this->_selectKeyword($itemid, $keyword);
         if ($keywordid == 0) {
-            $sql = sprintf('INSERT INTO tc_keyword (keyword) VALUES (\'%s\')', mysql_escape_string($keyword));
+            $sql = sprintf('INSERT INTO %s (keyword) VALUES (\'%s\')', sql_table('tc_keyword'), mysql_escape_string($keyword));
             sql_query($sql);
             $keywordid = mysql_insert_id();
         }
-        $sql = sprintf('INSERT INTO tc_keyword_relationship (keyword_id, key_id, type_id) VALUES (%d, %d, 1)',intval($keywordid),intval($itemid));
+        $params = array(sql_table('tc_keyword_relationship'), intval($keywordid), intval($itemid));
+        $sql = vsprintf('INSERT INTO %s (keyword_id, key_id, type_id) VALUES (%d, %d, 1)',$params);
         sql_query($sql);
     }
     function _deleteKeyword($itemid,$keyword)
     {
         $keywordid = $this->_selectKeyword($itemid,$keyword);
-        $sql = sprintf('DELETE FROM tc_keyword_relationship WHERE key_id=%d AND type_id=1 AND keyword_id=%d', intval($itemid), intval($keywordid));
+        $params = array(sql_table('tc_keyword_relationship'), intval($itemid), intval($keywordid));
+        $sql = vsprintf('DELETE FROM %s WHERE key_id=%d AND type_id=1 AND keyword_id=%d', $params);
         sql_query($sql);
     }
     // }}}
