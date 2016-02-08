@@ -248,7 +248,7 @@ class NP_Keywords extends NucleusPlugin {
     }
     function _selectKeyword($itemid,$keyword)
     {
-        $sql = sprintf('SELECT keyword_id FROM %s WHERE keyword=\'%s\'', sql_table('tc_keyword'), sql_real_escape_string($keyword));
+        $sql = sprintf("SELECT keyword_id FROM %s WHERE keyword='%s'", sql_table('tc_keyword'), sql_real_escape_string($keyword));
         $res = sql_query($sql);
         if (sql_num_rows($res)) {
             $o = sql_fetch_array($res);
@@ -264,7 +264,7 @@ class NP_Keywords extends NucleusPlugin {
         //check to see if keyword exists
         $keywordid = $this->_selectKeyword($itemid, $keyword);
         if ($keywordid == 0) {
-            $sql = sprintf('INSERT INTO %s (keyword) VALUES (\'%s\')', sql_table('tc_keyword'), sql_real_escape_string($keyword));
+            $sql = sprintf("INSERT INTO %s (keyword) VALUES ('%s')", sql_table('tc_keyword'), sql_real_escape_string($keyword));
             sql_query($sql);
             $keywordid = sql_insert_id();
         }
