@@ -18,8 +18,8 @@
 class NP_Keywords extends NucleusPlugin {
     // Plugin list data {{{
     function getName() { return 'Keywords Plugin'; } 
-    function getAuthor() { return '<a href="mailto:tychay@php.net">terry chay</a>'; } 
-    function getURL() { return 'http://www.terrychay.com/nucleus/'; } 
+    function getAuthor() { return 'terry chay, nucleuscms.org'; } 
+    function getURL() { return 'https://github.com/NucleusCMS/NP_Keywords'; } 
     function getVersion() { return '0.1'; } 
     function getDescription()
     { 
