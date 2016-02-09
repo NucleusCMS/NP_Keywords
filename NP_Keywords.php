@@ -144,7 +144,7 @@ class NP_Keywords extends NucleusPlugin {
      */
     function _generateForm($keywordstring='')
     {
-        printf('Keywords: <input name="plug_keywords" type="text" size="60" maxlength="256" value="%s"', $keywordstring);
+        printf('Keywords: <input name="plug_keywords" type="text" size="60" maxlength="256" value="%s" />', $keywordstring);
     }
     /**
      * Handle adding of keywords to database on a new entry.
