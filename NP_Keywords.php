@@ -1,29 +1,64 @@
 <?php
-
+ 
 /**
 * This plugin adds keywords support to your items (entries).
 *
 * Use of the skin variable <%Keywords%> in your archive or item skins will
 * allow you to include meta keywords in your HTML <HEAD> section.
 * i.e. <meta name="keywords" content="<%Keywords%>" />
+* In this context plugin accepts second parameter which is blog and third which is divider for keywords
+* list - it is comma by default. Use SPACE_PLACEHOLDER if you need space as divider
+* and COMMA_PLACEHOLDER for comma
+* If you use <%Keywords(3)%> inside templates, it will produce keyword-based "see also" links.
+* Number is how many links to produce for each of keywords.
+* You can also use <%Keywords(3,anyblog)%> to make links to other blog's entries too.
+*
+* @todo make default limit to work by default
+* @todo separate code and layout for linklist
+* @todo find a source of linebreak in SkinVar when used in meta keywords
+* @todo make prefixing seealso link with keyword configurable in plugin settings?
 *
 * @access  public
-* @copyright c. 2003, terry chay
+* @copyright c. 2003, terry chay, 2004 Alexander Gagin
 * @license BSD
-* @author  terry chay
+* @author  terry chay <tychay@php.net>, Alexander Gagin
+* @version 0.4
+*
+* History:
+*  0.31 Added gray keyword before a link to a seealso article
+*  0.32 Changed PostUpdateItem to PostAddItem (bug from original?)
+*       Relationship table linked to item table with foreign key
+*  0.33 TemplateVar now accepts second parameter which could be "anyblog"
+*        if link should point at posts from any blogs installed on the system
+*  0.34 Added third skinvar parameter for keywords divider
+*  0.35 added idraft=0 check at templatevar to not show links to drafts
+*  0.36 20feb05 fixed not closed input tag
+*  0.37 11apr05 changed keywords printout format in temlatevar according to new design
+*  0.38 16aug06 1. added comment with alternative install string
+*                  as current is not working on some MySQL versions (here: http://www.nucleus.com.ru/forum/index.php?showtopic=83&st=0&p=1240&#entry1240)
+*               2. added itime check to not show in seealso list future articles
 */
 class NP_Keywords extends NucleusPlugin {
     // Plugin list data {{{
-    function getName() { return 'Keywords Plugin'; } 
-    function getAuthor() { return 'terry chay, nucleuscms.org'; } 
-    function getURL() { return 'https://github.com/NucleusCMS/NP_Keywords'; } 
-    function getVersion() { return '0.2'; } 
-    function getDescription()
-    { 
-      return 'This plugin allows keywords to be included with your items and enables things so that the keywords can be displayed as a meta tag in the &lt;HEAD&gt; HTML section.'; 
+    function getName()    { return 'Keywords Plugin'; }
+    function getAuthor()  { return 'terry chay, Alexander Gagin, nucleuscms.org'; }
+    function getURL()     { return 'https://github.com/NucleusCMS/NP_Keywords'; } 
+    function getVersion() { return '0.4'; }
+    function getDescription()   { 
+      return 'This plugin allows keywords to be included with your items
+              and enables things so that the keywords can be displayed
+              as a meta tag in the &lt;HEAD&gt; HTML section.
+              If you use <%Keywords(3)%> inside templates, it will produce keyword-based "see also" links.
+              Number is how many links to produce for each of keywords.';
+     }
+    function supportsFeature($feature) {
+      switch($feature) {
+        case 'SqlTablePrefix':
+          return 1;
+        default:
+          return 0;
+      }
     }
-    // }}}
-
     // Plugin installation {{{
    /**
     * On plugin install, create the tables for type and keywords.
@@ -32,49 +67,27 @@ class NP_Keywords extends NucleusPlugin {
     * table.
     *
     * @todo only create the type table if it doesn't exist.
-    */ 
+    */
    function install()
    {
-        sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `keyword` varchar(255) NOT NULL default '', PRIMARY KEY  (`keyword_id`) ) ENGINE=MyISAM COMMENT='stores keywords';",sql_table('tc_keyword')));
-        sql_query(sprintf("CREATE TABLE `%s` ( `keyword_id` int(11) NOT NULL default '0', `key_id` int(11) NOT NULL default '0', `type_id` tinyint(4) NOT NULL default '0' ) ENGINE=MyISAM COMMENT='binds keywords to various items';",sql_table('tc_keyword_relationship')));
-        /*
-        // create some options
-        $this->createOption('Locale','Language (locale) to use','text','en');
-        */
-    } 
+        sql_query(sprintf("CREATE TABLE %s (keyword_id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY, keyword varchar(255) NOT NULL default '') ENGINE=MYISAM",sql_table('plug_keywords_keyword')));
+        sql_query(sprintf("CREATE TABLE %s (keyword_id int(11) NOT NULL, key_id int(11) NOT NULL, FOREIGN KEY (keyword_id) REFERENCES %s(keyword_id), FOREIGN KEY (key_id) REFERENCES %s(inumber)) ENGINE=MYISAM",sql_table('plug_keywords_relationship'),sql_table('plug_keywords_keyword'),sql_table('item')));
+    }
     /**
-     * This destorys the tables related to keywords.
+     * This destroys the tables related to keywords.
      *
-     * @todo remove also the entry for keywords in the type table.
      */
     function uninstall()
     {
-        sql_query( sprintf('DROP TABLE `%s`;', sql_table('tc_keyword')) );
-        sql_query( sprintf('DROP TABLE `%s`;', sql_table('tc_keyword_relationship')) );
-    }
-    // }}}
-
+        sql_query(sprintf("DROP TABLE %s",sql_table('plug_keywords_relationship')));
+        sql_query(sprintf("DROP TABLE %s",sql_table('plug_keywords_keyword')));
+     }
    /**
     * skinvar parameters:
     *      - blogname (optional)
+    * SkinVar prints keywords list (for meta field)
     */ 
-    function doSkinVar($skinType, $blogName = '') { 
-        global $manager, $blog, $CONF; 
-        
-        /*
-            find out which blog to use:
-                1. try the blog chosen in skinvar parameter
-                2. try to use the currently selected blog
-                3. use the default blog
-        */ 
-        if ($blogName) { 
-            $b =& $manager->getBlog(getBlogIDFromName($params[2])); 
-        } else if ($blog) { 
-            $b =& $blog; 
-        } else { 
-            $b =& $manager->getBlog($CONF['DefaultBlog']); 
-        } 
-        
+    function doSkinVar($skinType, $blogName = '', $divider = ',') {
         /*
             select which month to show
                 - for archives: use that month
@@ -83,8 +96,8 @@ class NP_Keywords extends NucleusPlugin {
         switch($skinType) { 
             case 'archive': 
                 //sscanf($GLOBALS['archive'],'%d-%d-%d',$y,$m,$d); 
-                //$time = mktime(0,0,0,$m,1,$y); 
-                $keywords = $this->_selectKeywordsFromBlogDate($b->getID(), $GLOBALS['archive']);
+                //$time = mktime(0,0,0,$m,1,$y);
+                $keywords = $this->_selectKeywordsFromBlogDate($this->_getBlogid($blogName), $GLOBALS['archive']);
                 break;
             case 'item':
                 $keywords = $this->_selectKeywords($GLOBALS['itemid']);
@@ -99,11 +112,68 @@ class NP_Keywords extends NucleusPlugin {
             default:
                 return;
                 //there are no associated keywords for these skins...
-        } 
-        
-        echo implode(',',$keywords);
+        }
+        //change space and comma placeholders to real symbols. Seems it's wrong way to do it.
+        $divider=str_replace("SPACE_PLACEHOLDER"," ",$divider);
+        $divider=str_replace("COMMA_PLACEHOLDER",",",$divider);
+        echo implode($divider,$keywords);
     }
     
+    /**
+        For keywords list user Skinvar.
+    This TemplVar function make "see also" links to articles with same keywords
+        @param int $limit number of links for each article's keywords
+        @param string $anyblog If set to "anyblog", will produce see-also links not only to current blog's entries, but all blogs
+    */
+    function doTemplateVar(&$item, $limit = 5, $anyblog = "")
+    {
+        $keys=array(0=>$item->itemid);
+        $sql = sprintf('SELECT keyword_id FROM %s WHERE key_id=%d', sql_table('plug_keywords_relationship'), intval($item->itemid));
+        $res = sql_query($sql);
+        
+        if ($anyblog=="anyblog") $onlyblog = "";
+        else                     $onlyblog = "AND i.iblog = " .  $this->_getBlogid();
+        
+    echo '<ul>';
+        // get keyword IDs for this article, now need to get list of articles that have same keyword
+        while ($o = sql_fetch_array($res)) {
+                $sql2 = sprintf('SELECT i.inumber,
+                                        i.ititle,
+                                        k.keyword
+                                   FROM %s as kr,
+                                        %s as i,
+                                        %s as k
+                                  WHERE kr.keyword_id = %d
+                                    AND kr.key_id = i.inumber
+                                    AND i.idraft = 0
+                    AND i.itime<=%s
+                    AND k.keyword_id = kr.keyword_id
+                                        %s
+                               ORDER BY i.itime DESC
+                                  LIMIT %d',
+                                 sql_table('plug_keywords_relationship'),
+                                 sql_table('item'),
+                                 sql_table('plug_keywords_keyword'),
+                                 intval($o[0]),
+                 // next string is based on code from BLOG.php, not sure how it works
+                 mysqldate(time() + 3600 * $manager->settings['btimeoffset']),
+                                 $onlyblog,
+                                 intval($limit)
+                                );
+                $res2 = sql_query($sql2);
+                while ($o2 = sql_fetch_array($res2)) {
+                        // uniques only
+                        if ( ! in_array($o2[0],$keys) ) {
+                                //echo '<font color=gray>' . $o2[2] . ':</font> <a href="' . createItemLink($o2[0]) . '">' . $o2[1] .'</a><br/>';
+                                echo '<li><a href="' . createItemLink($o2[0]) . '">' . $o2[1] .'</a> <span>('.$o2[2] .')</span></li>';
+                                $keys[]=$o2[0];
+                        }
+                }
+                sql_free_result($res2);
+        }
+        sql_free_result($res);
+    echo '</ul>';
+    }
     // Events {{{
     function getEventList()
     {
@@ -144,17 +214,17 @@ class NP_Keywords extends NucleusPlugin {
      */
     function _generateForm($keywordstring='')
     {
-        printf('Keywords: <input name="plug_keywords" type="text" size="60" maxlength="256" value="%s" />', $keywordstring);
+        printf('Keywords: <input name="plug_keywords_keywords" type="text" size="60" maxlength="256" value="%s"><br />', $keywordstring);
     }
     /**
      * Handle adding of keywords to database on a new entry.
      *
      * @param array $params contains the itemid.
      */
-    function event_PostUpdateItem(&$params)
+    function event_PostAddItem(&$params)
     {
         $itemid = $params['itemid'];
-        $keywords = explode(',',postvar('plug_keywords'));
+        $keywords = explode(',',postvar('plug_keywords_keywords'));
         foreach ($keywords as $keyword) {
             $this->_addKeyword($itemid,trim($keyword));
         }
@@ -167,7 +237,7 @@ class NP_Keywords extends NucleusPlugin {
     function event_PreUpdateItem(&$params)
     {
         $itemid = $params['itemid'];
-        $newkeywords = explode(',',postvar('plug_keywords'));
+        $newkeywords = explode(',',postvar('plug_keywords_keywords'));
         foreach ($newkeywords as $id=>$keyword) {
             $newkeywords[$id] = trim($keyword);
         }
@@ -190,13 +260,12 @@ class NP_Keywords extends NucleusPlugin {
     // database {{{
     function getTableList()
     {
-        return array(sql_table('tc_keyword'),sql_table('tc_keyword_relationship'));
+        return array(sql_table('plug_keywords_relationship'),sql_table('plug_keywords_keyword'));
     }
     
     function _selectKeywords($itemid)
     {
-        $params = array(sql_table('tc_keyword'), sql_table('tc_keyword_relationship'), intval($itemid));
-        $sql = vsprintf("SELECT k.keyword FROM %s as k, %s as kr WHERE kr.type_id=1 AND kr.key_id=%d AND kr.keyword_id=k.keyword_id", $params);
+        $sql = sprintf('SELECT k.keyword FROM %s as k,%s as kr WHERE kr.key_id=%d AND kr.keyword_id = k.keyword_id ORDER BY k.keyword',sql_table('plug_keywords_keyword'),sql_table('plug_keywords_relationship'),intval($itemid));
         $res = sql_query($sql);
         $returns = array();
         while ($o = sql_fetch_array($res)) {
@@ -218,23 +287,21 @@ class NP_Keywords extends NucleusPlugin {
         }
         $sql = sprintf("SELECT k.keyword
                           FROM %s as k,
-                               %s as r,
+                               %s as kr,
                                %s as i
                          WHERE i.iblog = %d
                            AND i.itime >= '%s'
                            AND i.itime < DATE_ADD('%s',INTERVAL 1 %s)
-                           AND r.key_id = i.inumber
-                           AND r.type_id = 1
-                           AND k.keyword_id = r.keyword_id",
-                       sql_table('tc_keyword'),
-                       sql_table('tc_keyword_relationship'),
+                           AND kr.key_id = i.inumber
+                           AND k.keyword_id = kr.keyword_id
+                         ORDER BY keyword",
+                       sql_table('plug_keywords_keyword'),sql_table('plug_keywords_relationship'),
                        sql_table('item'),
                        intval($blogid),
                        sql_real_escape_string($date),
                        sql_real_escape_string($date),
                        $len);
         $res = sql_query($sql);
-        $returns = array();
         while ($o = sql_fetch_array($res)) {
             $returns[] = $o[0];
         }
@@ -243,12 +310,15 @@ class NP_Keywords extends NucleusPlugin {
     }
     function _deleteKeywords($itemid)
     {
-        $sql = sprintf('DELETE FROM %s WHERE key_id=%d AND type_id=1',sql_table('tc_keyword_relationship'),intval($itemid));
+        $sql = sprintf('DELETE FROM %s WHERE key_id=%d', sql_table('plug_keywords_relationship'), intval($itemid));
         sql_query($sql);
     }
-    function _selectKeyword($itemid,$keyword)
+    /**
+    Returns KeywordID for keyword string or 0 if there's no one
+    */
+    function _getKeywordID($keyword)
     {
-        $sql = sprintf("SELECT keyword_id FROM %s WHERE keyword='%s'", sql_table('tc_keyword'), sql_real_escape_string($keyword));
+        $sql = sprintf("SELECT keyword_id FROM %s WHERE keyword='%s'", sql_table('plug_keywords_keyword'), sql_real_escape_string($keyword));
         $res = sql_query($sql);
         if (sql_num_rows($res)) {
             $o = sql_fetch_array($res);
@@ -262,21 +332,36 @@ class NP_Keywords extends NucleusPlugin {
     function _addKeyword($itemid,$keyword)
     {
         //check to see if keyword exists
-        $keywordid = $this->_selectKeyword($itemid, $keyword);
+        $keywordid = $this->_getKeywordID($keyword);
         if ($keywordid == 0) {
-            $sql = sprintf("INSERT INTO %s (keyword) VALUES ('%s')", sql_table('tc_keyword'), sql_real_escape_string($keyword));
+            $sql = sprintf("INSERT INTO %s (keyword) VALUES ('%s')", sql_table('plug_keywords_keyword'), sql_real_escape_string($keyword));
             sql_query($sql);
             $keywordid = sql_insert_id();
         }
-        $params = array(sql_table('tc_keyword_relationship'), intval($keywordid), intval($itemid));
-        $sql = vsprintf('INSERT INTO %s (keyword_id, key_id, type_id) VALUES (%d, %d, 1)',$params);
+        $sql = sprintf('INSERT INTO %s (keyword_id, key_id) VALUES (%d, %d)', sql_table('plug_keywords_relationship'), intval($keywordid),intval($itemid));
         sql_query($sql);
     }
     function _deleteKeyword($itemid,$keyword)
     {
-        $keywordid = $this->_selectKeyword($itemid,$keyword);
-        $params = array(sql_table('tc_keyword_relationship'), intval($itemid), intval($keywordid));
-        $sql = vsprintf('DELETE FROM %s WHERE key_id=%d AND type_id=1 AND keyword_id=%d', $params);
+        $keywordid = $this->_getKeywordID($keyword);
+        $sql = sprintf('DELETE FROM %s WHERE key_id=%d AND keyword_id=%d', sql_table('plug_keywords_relationship'), intval($itemid), intval($keywordid));
         sql_query($sql);
+    }
+    
+    function _getBlogid($blogname = '')
+    {
+        global $manager, $blog, $CONF;
+ 
+        /*
+            find out which blog to use:
+                1. try the blog chosen in skinvar parameter
+                2. try to use the currently selected blog
+                3. use the default blog
+        */
+        if ($blogName) $b =& $manager->getBlog(getBlogIDFromName($params[2]));
+        elseif($blog)  $b =& $blog;
+        else           $b =& $manager->getBlog($CONF['DefaultBlog']);
+        
+        return $b->getID();
     }
 }
