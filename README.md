@@ -11,8 +11,9 @@ allow you to include meta keywords in your HTML <HEAD> section.
 i.e. `<meta name="keywords" content="<%Keywords%>" />`
 
 In this context plugin accepts second parameter which is blog and third which is divider for keywords
-list - it is comma by default. Use SPACE_PLACEHOLDER if you need space as divider
-and COMMA_PLACEHOLDER for comma
+list - it is comma by default. Use `SPACE_PLACEHOLDER` if you need space as divider
+and `COMMA_PLACEHOLDER` for comma
+
 If you use `<%Keywords(3)%>` inside templates, it will produce keyword-based "see also" links.
 Number is how many links to produce for each of keywords.
 You can also use `<%Keywords(3,anyblog)%>` to make links to other blog's entries too.
@@ -30,7 +31,7 @@ History
 *  0.31 Added gray keyword before a link to a seealso article
 *  0.32 Changed PostUpdateItem to PostAddItem (bug from original?)
        Relationship table linked to item table with foreign key
-*  0.33 TemplateVar now accepts second parameter which could be "anyblog"
+*  0.33 TemplateVar now accepts second parameter which could be `anyblog`
 *        if link should point at posts from any blogs installed on the system
 *  0.34 Added third skinvar parameter for keywords divider
 *  0.35 added idraft=0 check at templatevar to not show links to drafts
